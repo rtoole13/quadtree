@@ -14,10 +14,12 @@ var canvasContext,
     mouseY;
 var objectList = [];
 
-var objectCount = 100;
-var objectRadius = 10;
-var objectMinSpeed = 1;
-var objectMaxSpeed = 3;
+var rectCount = 25;
+var circleCount = 25;
+var objectMaxDim = 30;
+var objectMinDim = 20;
+var objectMinDD = 1;
+var objectMaxDD = 3;
 
 var quadTree;
 
@@ -36,14 +38,9 @@ window.onload = function(){
 }
 
 function init(){
-    for(var i = 0; i < objectCount; i++){
-    	var x = getRandomIntInRange(0, canvas.width);
-    	var y = getRandomIntInRange(0, canvas.height);
-    	var speed = getRandomIntInRange(objectMinSpeed, objectMaxSpeed);
-    	var rhat = getRandomIntInRange(0, 359);
-    	var obj = new CircleObject(x, y, objectRadius, speed, rhat, 'blue');
-    	objectList.push(obj);
-    }
+    //dynamic object - stuck to mouse
+
+    createObjects();
     requestAnimationFrame(main);
 }
 
@@ -88,7 +85,7 @@ function updateObjects(){
 function checkCollisions(){
     quadTree = new QuadTree(0, canvas.width, 0, canvas.height, 4, 6, -1);
     sortObjects();
-
+    
 	for (var i = 0; i < objectList.length; i++){
 		var obj1, returnObjects;
 		obj1 = objectList[i];
@@ -137,7 +134,6 @@ function drawObjects(){
 	}
     quadTree.draw();
 }
-
 function calcMousePos(evt){
 	var rect = canvas.getBoundingClientRect(),
         root = document.documentElement;
@@ -146,7 +142,30 @@ function calcMousePos(evt){
 	mouseY = evt.pageY - rect.top - root.scrollTop;
 }
 
+function createObjects(){
+	for(var i = 0; i < rectCount; i++){
+		var w = getRandomIntInRange(objectMinDim, objectMaxDim);
+		var h = getRandomIntInRange(objectMinDim, objectMaxDim);
+		var x = getRandomIntInRange(0, canvas.width);
+		var y = getRandomIntInRange(0, canvas.height);
+		var dd = getRandomIntInRange(objectMinDD, objectMaxDD);
+		var rhat = getRandomIntInRange(0, 359);
+		var obj = new RectObject(x, y, w, h, 0, dd, rhat, 'blue');
+		objectList.push(obj);
+	}
+	for(var i = 0; i < circleCount; i++){
+		var r = getRandomIntInRange(objectMinDim, objectMaxDim);
+		var x = getRandomIntInRange(0, canvas.width);
+		var y = getRandomIntInRange(0, canvas.height);
+		var dd = getRandomIntInRange(objectMinDD, objectMaxDD);
+		var rhat = getRandomIntInRange(0, 359);
+		var obj = new CircleObject(x, y, r, dd, rhat, 'blue');
+		objectList.push(obj);
+	}
+}
+
 function sortObjects(){
+    quadTree.clear();
     for (var i = 0; i < objectList.length; i++){
         var obj = objectList[i];
         obj.colliding = false;
@@ -159,25 +178,27 @@ function drawBackground(){
 	canvasContext.fillRect(0,0,canvas.width,canvas.height);
 }
 
-function handleClick(evt){
-    console.log(quadTree);
-}
 
+function handleClick(evt){
+    var returnObjects = [];
+	returnObjects = quadTree.retrieve(returnObjects);
+    console.log(returnObjects);
+}
 class GameObject {
-	constructor(x, y, speed, angleDir, color){
+	constructor(x, y, dd, angleDir, color){
 		this.x = x;
 		this.y = y;
         this.color = color;
         this.basecolor = color;
 		this.colliding = false;
-		this.speed = speed;
+		this.dd = dd;
 		this.rhat = this.getDir(angleDir);
 	}
 	hit(){
 		this.colliding = true;
 	}
 	move(){
-		var newPos = {x: this.x + this.speed * this.rhat.x, y: this.y + this.speed * this.rhat.y};
+		var newPos = {x: this.x + this.dd * this.rhat.x, y: this.y + this.dd * this.rhat.y};
 		var newPos = this.checkCoords(newPos.x, newPos.y);
 		this.x = newPos.x;
 		this.y = newPos.y;
@@ -188,40 +209,67 @@ class GameObject {
 			if (this.rhat.x < 0){
 					this.rhat.x = -this.rhat.x;
 			}
-			_x = this.x + this.speed * this.rhat.x;
+			_x = this.x + this.dd * this.rhat.x;
 			hit = true;
 		}
 		else if(_x > canvas.width){
 			if (this.rhat.x > 0){
 					this.rhat.x = -this.rhat.x;
 			}
-			_x = this.x + this.speed * this.rhat.x;
+			_x = this.x + this.dd * this.rhat.x;
 			hit = true;
 		}
 		if (_y < 0){
 			if (this.rhat.y < 0){
 					this.rhat.y = -this.rhat.y;
 			}
-			_y = this.y + this.speed * this.rhat.y;
+			_y = this.y + this.dd * this.rhat.y;
 			hit = true;
 		}
 		else if(_y > canvas.height){
 			if (this.rhat.y > 0){
 					this.rhat.y = -this.rhat.y;
 			}
-			_y = this.y + this.speed * this.rhat.y;
+			_y = this.y + this.dd * this.rhat.y;
 			hit = true;
 		}
 		return {x:_x, y:_y};
 	}
 	getDir(theta){
-		return {x:Math.cos((theta) * Math.PI/180), y: -Math.sin((theta) * Math.PI/180)}; // normalized
+		var _x = Math.cos(theta * Math.PI/180);
+		var _y = Math.cos(theta * Math.PI/180);
+		var d  = Math.sqrt(Math.pow(_x,2) + Math.pow(_y,2)); //ask Jake
+		_x = _x/d;
+		_y = _y/d;
+		return {x:_x, y:_y}; // normalized
 	}
 }
 
+class RectObject extends GameObject{
+	constructor(x, y, width, height, angle, dd, angleDir, color){
+		super(x, y, dd, angleDir, color);
+		this.width = width;
+		this.height = height;
+		this.angle = angle;
+	}
+	draw(){
+        if(this.colliding){
+            this.color = 'red';
+        }
+        else{
+            this.color = this.basecolor;
+        }
+		canvasContext.save();
+		canvasContext.translate(this.x, this.y);
+		canvasContext.rotate(this.angle*Math.PI/180);
+		canvasContext.fillStyle = this.color;
+		canvasContext.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+		canvasContext.restore();
+	}
+}
 class CircleObject extends GameObject{
-	constructor(x, y, radius, speed, angleDir, color){
-		super(x, y, speed, angleDir, color);
+	constructor(x, y, radius, dd, angleDir, color){
+		super(x, y, dd, angleDir, color);
 		this.radius = radius;
 	}
 	draw(){
@@ -269,7 +317,7 @@ class QuadTree {
 		canvasContext.save();
 		canvasContext.translate(this.minX, this.minY);
 		canvasContext.beginPath();
-		canvasContext.lineWidth = "1";
+		canvasContext.lineWidth = "6";
 		canvasContext.strokeStyle = "blue";
 		canvasContext.rect(0, 0, this.width, this.height);
 		canvasContext.stroke();
@@ -284,6 +332,7 @@ class QuadTree {
 	splitNode(){
 		var subWidth  = Math.floor((this.width)/2);
 		var subHeight = Math.floor((this.height)/2);
+
 		this.nodes.push(new QuadTree(this.minX, this.minX + subWidth, this.minY, this.minY + subHeight, this.maxDepth, this.maxChildren, this.level + 1));
 		this.nodes.push(new QuadTree(this.minX + subWidth, this.maxX, this.minY, this.minY + subHeight, this.maxDepth, this.maxChildren, this.level + 1));
 		this.nodes.push(new QuadTree(this.minX, this.minX + subWidth, this.minY + subHeight, this.maxY, this.maxDepth, this.maxChildren, this.level + 1));
@@ -294,14 +343,14 @@ class QuadTree {
 		var horizontalMidpoint = this.minX + this.width/2;
 		var verticalMidpoint   = this.minY + this.height/2;
 
-		if (obj.x - obj.radius > this.minX && obj.x + obj.radius < horizontalMidpoint){
+		if (obj.x > this.minX && obj.x + obj.width < horizontalMidpoint){
 			var leftQuadrant = true;
 		}
-		if (obj.x + obj.radius < this.maxX && obj.x - obj.radius > horizontalMidpoint){
+		if (obj.x + obj.width < this.maxX && obj.x > horizontalMidpoint){
 			var rightQuadrant = true;
 		}
 
-		if (obj.y - obj.radius > this.minY && obj.y + obj.radius < verticalMidpoint){
+		if (obj.y > this.minY && obj.y + obj.height < verticalMidpoint){
 			if (leftQuadrant){
 				index = 0;
 			}
@@ -309,7 +358,7 @@ class QuadTree {
 				index = 1;
 			}
 		}
-		else if (obj.y + obj.radius < this.maxY && obj.y - obj.radius > verticalMidpoint){
+		else if (obj.y + obj.width < this.maxY && obj.y > verticalMidpoint){
 			if (leftQuadrant){
 				index = 2;
 			}
@@ -325,6 +374,7 @@ class QuadTree {
 			var index = this.getIndex(obj);
 			if (index != -1){
 				this.nodes[index].insert(obj);
+
 				return;
 			}
 		}
@@ -350,12 +400,19 @@ class QuadTree {
 	}
 	retrieve(returnObjects, obj){
 		var index = this.getIndex(obj);
+        //console.log(this.nodes[0]);
+
 		if (index != -1 && this.nodes[0] != null){
 			this.nodes[index].retrieve(returnObjects, obj);
 		}
         returnObjects.push.apply(returnObjects, this.objects);
 		return returnObjects;
 	}
+}
+
+//------utils------//
+function getRandomIntInRange(min, max){
+	return Math.floor(Math.random() * (max-min) + min);
 }
 </script>
 </html>

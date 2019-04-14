@@ -98,6 +98,7 @@ function lineIntersectCircle(circle, a, b){
     }
     return false;
 }
+
 function getDistance(x1, y1, x2, y2){
     return Math.sqrt(Math.pow(x2-x1,2) + Math.pow(y2-y1, 2));
 }
@@ -108,4 +109,8 @@ function getDistanceSq(x1, y1, x2, y2){
 
 function dotProduct(a, b){
     return a.x * b.x + a.y * b.y;
+}
+
+function getRandomIntInRange(min, max){
+	return Math.floor(Math.random() * (max-min) + min);
 }
