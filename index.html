@@ -68,7 +68,10 @@ var quadTree,
 var lastFrame = new Date(),
 	currentFrame,
 	dt,
-	dtMax = 1/15;
+	dtMax = 1/15,
+	avgFrameRate = 0,
+	avgFrameCount = 0,
+	avgFrameCumulativeDT = 0;
 
 window.onload = function(){
 	canvasContext = canvas.getContext('2d');
@@ -96,6 +99,7 @@ function main(){
     currentFrame = new Date();
     dt = (currentFrame - lastFrame) / 1000.0;
     dt = (dt < dtMax)? dt : dtMax; //cap dt in the event of tabbing away
+    updateAverageFrameRate();
     updateGuiMetrics();
     lastFrame = currentFrame;
     /*
@@ -112,6 +116,17 @@ function main(){
     	return;
     }
     requestAnimationFrame(main);
+}
+
+function updateAverageFrameRate(){
+	avgFrameCount += 1;
+	avgFrameCumulativeDT = (avgFrameCumulativeDT * (avgFrameCount - 1) + dt) / avgFrameCount;
+	avgFrameRate = 1 / avgFrameCumulativeDT;
+}
+
+function resetAverageFrameRate(){
+	avgFrameCount = 0;
+	avgFrameCumulativeDT = 0;
 }
 
 function addNewObjects(count){

@@ -11,6 +11,7 @@ function updateParticleCount(){
 		removeObjects(Math.abs(diff));
 	}
     updateDynamicGUIElements();
+    resetAverageFrameRate();
 }
 
 function updateObjectColors(){
@@ -26,15 +27,17 @@ function updateDynamicGUIElements(){
 
 function updateQuadtreeChildCount(){
     maxChildrenPerNode = params.maxChildren;
+    resetAverageFrameRate();
 }
 
 function updateQuadtreeDepth(){
     maxTreeDepth = params.maxDepth;
+    resetAverageFrameRate();
 }
 
 function updateQuadtreeColor(){
     quadtreeColor = params.quadtreeColor;
-    quadtreeColorStr = `rgba(${quadtreeColor}, 1)`;   
+    quadtreeColorStr = `rgba(${quadtreeColor}, 1)`;
 }
 
 function updateBackgroundColor(){
@@ -54,10 +57,12 @@ function pause(){
 //----Gui metric updates----//
 function updateGuiMetrics(){
     params.fps = 1/dt;
+    params.averagefps = avgFrameRate;
 }
 
 function initializeGUI(){
-    params = {fps: 1/dtMax, 
+    params = {fps: 1/dtMax,
+              averagefps: avgFrameRate, 
     		  objectCount: objectCount,
               maxChildren: maxChildrenPerNode,
               maxDepth: maxTreeDepth,
@@ -70,6 +75,7 @@ function initializeGUI(){
 	gui = new dat.GUI();
 	var guiFolderMetrics = gui.addFolder('Metrics');
     guiFolderMetrics.add(params, 'fps', 0, 100).listen();
+    guiFolderMetrics.add(params, 'averagefps', 0, 100).listen();
     
     var guiFolderObjects = gui.addFolder('Objects');
     var entry = guiFolderObjects.add(params, 'objectCount', 0, 1000).step(1);
